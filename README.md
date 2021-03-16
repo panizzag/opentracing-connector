@@ -1,6 +1,7 @@
 # Opentracing Connector
 
-Opentracing connector for Mule 4 migrated from https://github.com/mulesoft-consulting/opentracing
+Opentracing connector for Mule 4 migrated from https://github.com/mulesoft-consulting/opentracing.
+
 Credits to https://github.com/Raviumapathy who created the Mule 3 version of this connector
 
 
