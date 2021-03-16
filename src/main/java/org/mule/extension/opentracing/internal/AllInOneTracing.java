@@ -22,8 +22,12 @@ import io.opentracing.tag.Tags;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.Request;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class AllInOneTracing {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AllInOneTracing.class);
 
     private Tracer tracer = null;
     private static String AGENT_HOST; // ="localhost";
@@ -119,7 +123,7 @@ public final class AllInOneTracing {
                             .port(port)
                             .addPathSegment(targetPath)
                             .build();
-            System.out.println("INSIDE INJECT - URL is " + url);
+            LOGGER.debug("INSIDE INJECT - URL is " + url);
             Request.Builder requestBuilderTrace = new Request.Builder().url(url);
             Tags.SPAN_KIND.set(tracer.activeSpan(), Tags.SPAN_KIND_CLIENT);
             Tags.HTTP_METHOD.set(tracer.activeSpan(), httpMethod);
@@ -138,7 +142,7 @@ public final class AllInOneTracing {
                             targetPath); // test is a resource name - replace with targetPath
             for (Iterator iterator = keys.iterator(); iterator.hasNext(); ) {
                 String keyName = (String) iterator.next();
-                System.out.println(
+                LOGGER.debug(
                         "INJECT TRACE - Ravis test - KeyName "
                                 + keyName
                                 + " Value "
@@ -151,7 +155,7 @@ public final class AllInOneTracing {
 
             return h;
         } catch (Exception e) {
-            System.out.println("Error trying to inject Trace " + e.getMessage());
+            LOGGER.error("Error trying to inject Trace " + e.getMessage());
             e.printStackTrace();
             return null; // Should we supply some dummy trace more like DLQ...all orphans can land
             // in one trace?
@@ -175,8 +179,7 @@ public final class AllInOneTracing {
             SpanContext parentSpanCtx =
                     tracer.extract(
                             Format.Builtin.HTTP_HEADERS, new TextMapExtractAdapter(headersMap));
-            System.out.println(
-                    " **INSIDE extractTrace-AiOne -  Parent Span context "
+            LOGGER.debug(" **INSIDE extractTrace-AiOne -  Parent Span context "
                             + parentSpanCtx
                             + "  OperationName "
                             + resourceName);
@@ -194,7 +197,7 @@ public final class AllInOneTracing {
                             com.google.common.collect.ImmutableMap.of(
                                     spanLogFieldName, "string-format", "value", spanLogFieldValue));
         } catch (Exception e) {
-            System.out.println(" &&&&&& inside exception trying to extractTrace " + e.getMessage());
+            LOGGER.error(" &&&&&& inside exception trying to extractTrace " + e.getMessage());
             spanBuilder = tracer.buildSpan(resourceName);
         }
     }
@@ -217,11 +220,10 @@ public final class AllInOneTracing {
         @Override
         public void put(String key, String value) {
             builder.addHeader(key, value);
-            System.out.println(
-                    "******* INSIDE THE RequestBuilderCarrier : key = "
-                            + key
-                            + " Value = "
-                            + value);
+            LOGGER.debug("******* INSIDE THE RequestBuilderCarrier : key = "
+                        + key
+                        + " Value = "
+                        + value);
         }
     }
 
