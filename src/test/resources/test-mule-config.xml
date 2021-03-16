@@ -1,0 +1,19 @@
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:opentracing="http://www.mulesoft.org/schema/mule/opentracing"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+          http://www.mulesoft.org/schema/mule/opentracing http://www.mulesoft.org/schema/mule/opentracing/current/mule-opentracing.xsd">
+
+    <opentracing:config name="config" configId="configId">
+        <opentracing:connection requiredParameter="aValue" />
+    </opentracing:config>
+
+    <flow name="sayHiFlow">
+        <opentracing:say-hi person="Mariano Gonzalez"/>
+    </flow>
+
+    <flow name="retrieveInfoFlow">
+        <opentracing:retrieve-info config-ref="config"/>
+    </flow>
+
+</mule>
