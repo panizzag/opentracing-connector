@@ -13,6 +13,7 @@ import org.mule.runtime.http.api.domain.message.request.HttpRequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -59,8 +60,7 @@ public final class OpentracingConnection {
                                       new Integer(genConfig.getAgentPort()).intValue(),
                                       new Integer(genConfig.getFlushIntervalInMillis()).intValue(),
                                       new Integer(genConfig.getMaxQueueSize()).intValue());
-      openTrace.beginSpan(
-              traceName, spanName, tagName.name(), tagValue, logType.name(), logMessage);
+      openTrace.beginSpan(spanName, tagName.name(), tagValue, logType.name(), logMessage);
     } catch (Exception e) {
       LOGGER.error("Failed while Begining the span and trace: " + e.getMessage());
     }
@@ -69,6 +69,7 @@ public final class OpentracingConnection {
   public void endSpan(String spanName, OpenTraceLogType logType, String logMessage) {
     try {
       if (openTrace == null) {
+        LOGGER.warn("endSpan operation. openTrace instance is null, creating a new one");
         openTrace = new AllInOneTracing(traceName,
                                         genConfig.getAgentHost(),
                                         new Integer(genConfig.getAgentPort()).intValue(),
@@ -81,9 +82,15 @@ public final class OpentracingConnection {
     }
   }
 
-  public void injectTrace(String remoteHost, String remotePort, String remotePath, HttpMethod remoteServiceHttpMethod, Map<String, Object> outboundHeaders) {
+  public Map<String, String> injectTrace(String remoteHost,
+                                         String remotePort,
+                                         String remotePath,
+                                         String scheme,
+                                         HttpMethod remoteServiceHttpMethod) {
+    Map<String, String> headers = new HashMap<String, String>();
     try {
       if (openTrace == null) {
+        LOGGER.warn("injectTrace operation. openTrace instance is null, creating a new one");
         openTrace = new AllInOneTracing(traceName,
                                         genConfig.getAgentHost(),
                                         new Integer(genConfig.getAgentPort()).intValue(),
@@ -91,18 +98,19 @@ public final class OpentracingConnection {
                                         new Integer(genConfig.getMaxQueueSize()).intValue());
       }
 
-      Map map = openTrace.injectTrace(
-                      remoteHost, remotePort, remotePath, remoteServiceHttpMethod.name());
-      outboundHeaders.putAll(map);
+      Map map = openTrace.injectTrace(remoteHost, remotePort, remotePath, remoteServiceHttpMethod.name(), scheme);
+      headers.putAll(map);
     } catch (Exception e) {
       LOGGER.error("Failed while Injecting the trace: " + e.getMessage());
+      e.printStackTrace();
     }
+    return headers;
   }
 
-  public void extractTrace(String traceID, String resourceName, TagType tagName, String tagValue, OpenTraceLogType logType, String logMessage) {
+  public void extractTrace(String traceID, String headerName, String resourceName, TagType tagName, String tagValue, OpenTraceLogType logType, String logMessage) {
     try {
       this.traceName = resourceName + "-tracer";
-      LOGGER.debug("INSIDE extractTrace - Tracename is "
+      LOGGER.debug("Tracename is "
                       + traceName
                       + " TraceID :"
                       + traceID
@@ -116,36 +124,33 @@ public final class OpentracingConnection {
                                       new Integer(genConfig.getFlushIntervalInMillis()).intValue(),
                                       new Integer(genConfig.getMaxQueueSize()).intValue());
       if (traceID != null)
-        openTrace.extractTrace(
-                traceID,
-                resourceName,
-                tagName.name(),
-                tagValue,
-                logType.name(),
-                logMessage);
+        openTrace.extractTrace(traceID,
+                               headerName,
+                               resourceName,
+                               logType.name(),
+                               logMessage);
       else
-        openTrace.beginSpan(
-                traceName,
-                resourceName,
-                tagName.name(),
-                tagValue,
-                logType.name(),
-                "Begning a new Span");
+        openTrace.beginSpan(resourceName,
+                            tagName.name(),
+                            tagValue,
+                            logType.name(),
+                            "TraceID not found. Starting a new Span");
     } catch (Exception e) {
       LOGGER.error("Failed while Extracting trace" + e.getMessage());
+      e.printStackTrace();
     }
   }
 
   public void writeTraceLog(String spanName, OpenTraceLogType logType, String logMessage) {
     try {
-      LOGGER.debug(logMessage);
       if (openTrace == null) {
         openTrace = new AllInOneTracing(traceName,
                                         genConfig.getAgentHost(),
                                         new Integer(genConfig.getAgentPort()).intValue(),
                                         new Integer(genConfig.getFlushIntervalInMillis()).intValue(),
                                         new Integer(genConfig.getMaxQueueSize()).intValue());
-          }
+      }
+      LOGGER.debug("Writing logType {} to spanName {} ", logType.name(), spanName);
       openTrace.writeTraceLog(spanName, logType.name(), logMessage);
     } catch (Exception e) {
       LOGGER.error("Failed while writing to log " + e.getMessage());
@@ -155,6 +160,7 @@ public final class OpentracingConnection {
   public void addTag(String spanName, TagType tagType, String tagvalue) {
     try {
       if (openTrace == null) {
+        LOGGER.warn("addTag operation. openTrace instance is null, creating a new one");
         openTrace = new AllInOneTracing(traceName,
                                         genConfig.getAgentHost(),
                                         new Integer(genConfig.getAgentPort()).intValue(),
