@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import io.opentracing.Scope;
 import org.apache.http.client.methods.RequestBuilder;
 
 import com.uber.jaeger.Configuration;
@@ -30,11 +31,11 @@ public final class AllInOneTracing {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AllInOneTracing.class);
 
-    private Tracer tracer = null;
-    private String traceName = null;
+    private static Tracer tracer = null;
+    private static String traceName = null;
     private static String AGENT_HOST;
     private static Integer AGENT_PORT;
-    private io.opentracing.Scope scope = null;
+    private static io.opentracing.Scope scope = null;
     private static int FLUSH_INTERVAL_IN_MS = 100;
     private static int MAX_QUEUE_SIZE = 10;
 
@@ -51,10 +52,16 @@ public final class AllInOneTracing {
     }
 
     public static com.uber.jaeger.Tracer init(String service) {
-        SamplerConfiguration samplerConfig = new SamplerConfiguration("const", 1);
-        ReporterConfiguration reporterConfig = new ReporterConfiguration(true, AGENT_HOST, AGENT_PORT, FLUSH_INTERVAL_IN_MS, MAX_QUEUE_SIZE);
-        Configuration config = new Configuration(service, samplerConfig, reporterConfig);
-        return (com.uber.jaeger.Tracer) config.getTracer();
+        if (tracer == null) {
+            traceName = service;
+            SamplerConfiguration samplerConfig = new SamplerConfiguration("const", 1);
+            ReporterConfiguration reporterConfig = new ReporterConfiguration(true, AGENT_HOST, AGENT_PORT, FLUSH_INTERVAL_IN_MS, MAX_QUEUE_SIZE);
+            Configuration config = new Configuration(service, samplerConfig, reporterConfig);
+            return (com.uber.jaeger.Tracer) config.getTracer();
+        }else{
+            return (com.uber.jaeger.Tracer) tracer;
+        }
+
     }
 
     public AllInOneTracing(String traceName,
@@ -64,7 +71,6 @@ public final class AllInOneTracing {
                            Integer maxQSize) {
         setConfiguration(agentHost, agentPort, flushIntervalInMs, maxQSize);
         tracer = init(traceName);
-        this.traceName = traceName;
     }
 
     public void beginSpan(String spanName,
